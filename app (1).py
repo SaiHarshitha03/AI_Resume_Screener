@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 import spacy
-import os
+import subprocess
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -25,10 +25,14 @@ def load_data():
 df = load_data()
 
 # -------------------------------
-# Ensure SpaCy Model is Available
+# Ensure SpaCy Model is Installed
 # -------------------------------
-os.system("python -m spacy download en_core_web_sm > /dev/null")
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    st.warning("Downloading SpaCy model for the first time... ⏳")
+    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
+    nlp = spacy.load("en_core_web_sm")
 
 # -------------------------------
 # Text Cleaning Function
@@ -40,7 +44,7 @@ def clean_text(text):
     doc = nlp(text)
     return ' '.join([token.lemma_ for token in doc if not token.is_stop])
 
-# Preprocess Resumes (use first 100 for speed)
+# Preprocess Resumes (sample 100 for speed)
 df['cleaned_resume'] = df['Resume'].apply(clean_text)
 resumes = df['cleaned_resume'].tolist()[:100]
 
@@ -77,4 +81,3 @@ if st.button("🔍 Analyze"):
         st.bar_chart(top_results.set_index("Resume_Index")["Match_Score"])
 
         st.success("✅ Analysis complete! These are the best matching resumes.")
-
